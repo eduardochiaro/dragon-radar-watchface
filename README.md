@@ -4,16 +4,16 @@ A Pebble watchapp/watchface inspired by Dragon radar in Dragon Ball.
 ## Screenshots
 
 ### OG/2/Duo
-[Aplite](/assets/aplite_1.png)
+![Aplite](/assets/aplite_1.png)
 
 ### Time/Time Steel
-[Basalt](/assets/basalt_1.png)
+![Basalt](/assets/basalt_1.png)
 
 ### Round
-[Chalk](/assets/chalk_1.png)
+![Chalk](/assets/chalk_1.png)
 
 ### Time 2
-[Emery](/assets/emery_1.png)
+![Emery](/assets/emery_1.png)
 
 ### Round 2
-[Gabbro](/assets/gabbro_1.png)
+![Gabbro](/assets/gabbro_1.png)
