@@ -17,3 +17,8 @@ A Pebble watchface inspired by Dragon Radar in Dragon Ball.
 
 ### Round 2
 ![Gabbro](/assets/gabbro_1.png)
+
+
+#Store
+[Rebble App Store](https://apps.rebble.io/en_US/application/69f5bdbc8fdda50008c81da4)
+[Pebble App Store](https://apps.repebble.com/69f5bdbc8fdda50008c81da4)
