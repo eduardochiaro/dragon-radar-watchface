@@ -27,7 +27,12 @@ static char s_date_buffer[16];
 
 #define DBALL_RADIUS 6
 static int       s_last_minute      = -1;
-// -------------------------------------
+
+// ----- Settings -----
+#define SETTINGS_KEY_RADAR_STYLE 1
+typedef enum { RADAR_STYLE_FOUR_ARROWS = 0, RADAR_STYLE_ONE_ARROW = 1 } RadarStyle;
+static RadarStyle s_radar_style = RADAR_STYLE_FOUR_ARROWS;
+// ---------------------
 
 static void prv_blink_callback(void *context) {
   s_dball_visible = !s_dball_visible;
@@ -92,12 +97,14 @@ static void prv_canvas_update_proc(Layer *layer, GContext *ctx) {
   graphics_context_set_fill_color(ctx, PBL_IF_COLOR_ELSE(GColorMayGreen, GColorWhite));
   graphics_fill_rect(ctx, bounds, 0, GCornerNone);
 
-  // Draw 40x40 grid centered
+  // Draw 40x40 grid — offsets derived from center so lines always intersect at cx,cy
   graphics_context_set_stroke_color(ctx, PBL_IF_COLOR_ELSE(GColorDarkGreen, GColorDarkGray));
   graphics_context_set_stroke_width(ctx, 1);
 
-  int x_offset = (bounds.size.w % 40) / 2;
-  int y_offset = (bounds.size.h % 40) / 2;
+  int cx = bounds.size.w / 2;
+  int cy = bounds.size.h / 2;
+  int x_offset = cx % 40;
+  int y_offset = cy % 40;
 
   for (int x = x_offset; x <= bounds.size.w; x += 40) {
     graphics_draw_line(ctx, GPoint(x, 0), GPoint(x, bounds.size.h));
@@ -124,36 +131,43 @@ static void prv_canvas_update_proc(Layer *layer, GContext *ctx) {
     }
   }
 
-  // Draw red triangles at center of each edge, pointing outward
+  // Draw radar triangles
   graphics_context_set_fill_color(ctx, PBL_IF_COLOR_ELSE(GColorRed, GColorBlack));
-  int cx = bounds.size.w / 2;
-  int cy = bounds.size.h / 2;
   int ts = is_large_screen ? 8 : 6;
   int te = is_large_screen ? 10 : 5;
 
-  GPoint top_pts[] = { GPoint(cx, te), GPoint(cx - ts, te + ts), GPoint(cx + ts, te + ts) };
-  GPathInfo top_info = { .num_points = 3, .points = top_pts };
-  GPath *top_path = gpath_create(&top_info);
-  gpath_draw_filled(ctx, top_path);
-  gpath_destroy(top_path);
+  if (s_radar_style == RADAR_STYLE_FOUR_ARROWS) {
+    GPoint top_pts[] = { GPoint(cx, te), GPoint(cx - ts, te + ts), GPoint(cx + ts, te + ts) };
+    GPathInfo top_info = { .num_points = 3, .points = top_pts };
+    GPath *top_path = gpath_create(&top_info);
+    gpath_draw_filled(ctx, top_path);
+    gpath_destroy(top_path);
 
-  GPoint bot_pts[] = { GPoint(cx, bounds.size.h - te), GPoint(cx - ts, bounds.size.h - te - ts), GPoint(cx + ts, bounds.size.h - te - ts) };
-  GPathInfo bot_info = { .num_points = 3, .points = bot_pts };
-  GPath *bot_path = gpath_create(&bot_info);
-  gpath_draw_filled(ctx, bot_path);
-  gpath_destroy(bot_path);
+    GPoint bot_pts[] = { GPoint(cx, bounds.size.h - te), GPoint(cx - ts, bounds.size.h - te - ts), GPoint(cx + ts, bounds.size.h - te - ts) };
+    GPathInfo bot_info = { .num_points = 3, .points = bot_pts };
+    GPath *bot_path = gpath_create(&bot_info);
+    gpath_draw_filled(ctx, bot_path);
+    gpath_destroy(bot_path);
 
-  GPoint left_pts[] = { GPoint(te, cy), GPoint(te + ts, cy - ts), GPoint(te + ts, cy + ts) };
-  GPathInfo left_info = { .num_points = 3, .points = left_pts };
-  GPath *left_path = gpath_create(&left_info);
-  gpath_draw_filled(ctx, left_path);
-  gpath_destroy(left_path);
+    GPoint left_pts[] = { GPoint(te, cy), GPoint(te + ts, cy - ts), GPoint(te + ts, cy + ts) };
+    GPathInfo left_info = { .num_points = 3, .points = left_pts };
+    GPath *left_path = gpath_create(&left_info);
+    gpath_draw_filled(ctx, left_path);
+    gpath_destroy(left_path);
 
-  GPoint right_pts[] = { GPoint(bounds.size.w - te, cy), GPoint(bounds.size.w - te - ts, cy - ts), GPoint(bounds.size.w - te - ts, cy + ts) };
-  GPathInfo right_info = { .num_points = 3, .points = right_pts };
-  GPath *right_path = gpath_create(&right_info);
-  gpath_draw_filled(ctx, right_path);
-  gpath_destroy(right_path);
+    GPoint right_pts[] = { GPoint(bounds.size.w - te, cy), GPoint(bounds.size.w - te - ts, cy - ts), GPoint(bounds.size.w - te - ts, cy + ts) };
+    GPathInfo right_info = { .num_points = 3, .points = right_pts };
+    GPath *right_path = gpath_create(&right_info);
+    gpath_draw_filled(ctx, right_path);
+    gpath_destroy(right_path);
+  } else {
+    // Same-size triangle as the edge ones, centered on screen, pointing up
+    GPoint one_pts[] = { GPoint(cx, cy - ts), GPoint(cx - ts, cy + ts), GPoint(cx + ts, cy + ts) };
+    GPathInfo one_info = { .num_points = 3, .points = one_pts };
+    GPath *one_path = gpath_create(&one_info);
+    gpath_draw_filled(ctx, one_path);
+    gpath_destroy(one_path);
+  }
 }
 
 static void prv_window_load(Window *window) {
@@ -239,7 +253,21 @@ static void prv_window_unload(Window *window) {
   layer_destroy(s_canvas_layer);
 }
 
+static void prv_inbox_received(DictionaryIterator *iter, void *context) {
+  Tuple *radar_style_t = dict_find(iter, MESSAGE_KEY_RADAR_STYLE);
+  if (radar_style_t) {
+    s_radar_style = (RadarStyle)radar_style_t->value->int32;
+    persist_write_int(SETTINGS_KEY_RADAR_STYLE, s_radar_style);
+    layer_mark_dirty(s_canvas_layer);
+  }
+}
+
 static void prv_init(void) {
+  s_radar_style = (RadarStyle)persist_read_int(SETTINGS_KEY_RADAR_STYLE);
+
+  app_message_open(64, 64);
+  app_message_register_inbox_received(prv_inbox_received);
+
   s_window = window_create();
   window_set_window_handlers(s_window, (WindowHandlers) {
     .load = prv_window_load,
