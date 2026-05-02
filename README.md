@@ -1,5 +1,5 @@
 # Dragon Radar
-A Pebble watchapp/watchface inspired by Dragon radar in Dragon Ball.
+A Pebble watchface inspired by Dragon Radar in Dragon Ball.
 
 ## Screenshots
 
